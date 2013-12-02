@@ -168,7 +168,6 @@ if(window.$fh){
    */
 
   $fh.__dest__.cam = function (p, s, f) {
-    alert("Cam called");
     var source = navigator.camera.PictureSourceType.CAMERA;
     if (p.source && p.source == 'photo') {
       source = navigator.camera.PictureSourceType.PHOTOLIBRARY;
