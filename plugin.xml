@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    id="com.feedhenry.plugins.apis"
+    version="0.0.1">
+    <name>FH Legacy API Wrapper</name>
+    <description>Implement $fh.* legacy APIs, most of them are just wrappers around cordova API</description>
+    <license>MIT</license>
+    <keywords>FeedHenry, API</keywords>
+    <repo>https://github.com/fheng/fh-cordova-plugins-api</repo>
+    <issue>https://github.com/fheng/fh-cordova-plugins-api/issues</issue>
+    
+    <!-- see http://cordova.apache.org/docs/en/3.0.0/plugin_ref_spec.md.html#Plugin%20Specification for element details-->
+    <js-module src="www/fhapi.js" name="FHAPI">
+        <merges target="$fh" />
+    </js-module>
+</plugin>
