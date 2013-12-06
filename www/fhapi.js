@@ -113,7 +113,11 @@ if(window.$fh){
 
   $fh.__dest__MEDIA_ID = 'default';
 
+
+
   $fh.__dest__.audio = function (p, s, f) {
+    var PhoneGap = PhoneGap || {};
+    PhoneGap.mediaObjects = PhoneGap.mediaObjects || {};
     var media = PhoneGap.mediaObjects[p.id || $fh.__dest__MEDIA_ID];
     if (!media && p.path) {
       media = new Media(p.path, s, f);
@@ -351,14 +355,18 @@ if(window.$fh){
         });
       },
       choose: function () {
-        navigator.contacts.chooseContact(function (data) {
-          var cs = processResults(data);
-          s({
-            list: cs
+        if(typeof navigator.contacts.chooseContact === "function"){
+          navigator.contacts.chooseContact(function (data) {
+            var cs = processResults(data);
+            s({
+              list: cs
+            });
+          }, function () {
+            f('contacts_choose_error', {}, p);
           });
-        }, function () {
-          f('contacts_choose_error', {}, p);
-        });
+        } else {
+          f('contacts_not_supported', {}, p);
+        }
       }
     };
     var actfunc = acts[p.act];
@@ -541,7 +549,7 @@ if(window.$fh){
 
   $fh.__dest__.env = function (p, s, f) {
     s({
-      uuid: navigator.device.uuid
+      uuid: window.device? window.device.uuid: navigator.device.uuid;
     });
   };
 
@@ -566,15 +574,24 @@ if(window.$fh){
     if(p.title){
       ops.title = p.title;
     }
-    navigator.webview.open(function(){
-      s();
-    }, function(err){
-      f(err, {}, p);
-    }, ops);
+    if(typeof navigator.webview !== "undefined"){
+      navigator.webview.open(function(){
+        s();
+      }, function(err){
+        f(err, {}, p);
+      }, ops);
+    } else {
+      //use cordova inappbrowser
+      var ref = window.open(p.url, "_blank", 'location=no');
+      ref.addEventListener('loadstop', function(){
+        s();
+      });
+    }
+    
   };
   //compatible with 7.0
   var openUrl = function(url){
-    $fh.webview({url:url}, function(){}, function(){});
+    window.open(url, '_blank', 'location=no');
   }
   document.addEventListener('deviceready', function () {
     $fh._readyState = true;
