@@ -14,4 +14,10 @@
     <js-module src="www/fhapi.js" name="FHAPI">
         <merges target="$fh" />
     </js-module>
+
+    <platform name="ios">
+        <js-module src="www/fhapi-ios.js" name="FHAPI">
+          <merges target="$fh" />
+        </js-module>
+    </platform>
 </plugin>
