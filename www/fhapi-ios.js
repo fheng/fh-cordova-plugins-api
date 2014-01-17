@@ -565,16 +565,16 @@ if(window.$fh){
     if(typeof PushNotification === "undefined"){
       return f("push_no_impl");
     }
-    var onRegistration = function(event)  {
-      if (!event.error) {
-        console.log("Reg Success: " + event.pushID)
-        s({deviceToken: event.pushID});
-      } else {
-        f(event.error);
-      }
-    }
     var acts = {
       'register': function(){
+        var onRegistration = function(event)  {
+          if (!event.error) {
+            console.log("Reg Success: " + event.pushID)
+            s({deviceToken: event.pushID});
+          } else {
+            f(event.error);
+          }
+        }
         document.addEventListener("urbanairship.registration", onRegistration, false);
 
         PushNotification.isPushEnabled(function(enabled){
