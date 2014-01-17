@@ -586,6 +586,13 @@ if(window.$fh){
             })
           }
         });
+
+        document.addEventListener("resume", function(){
+          PushNotification.resetBadge();
+        }, false);
+        document.addEventListener("pause", function(){
+          document.removeEventListener("urbanairship.registration", onRegistration, false);
+        }, false);
       },
       
       'receive': function(){
@@ -604,6 +611,13 @@ if(window.$fh){
             })
           }
         });
+
+        document.addEventListener("resume", function(){
+          PushNotification.getIncoming(onPush);
+        }, false);
+        document.addEventListener("pause", function(){
+          document.removeEventListener("urbanairship.push", onRegistration, false);
+        }, false);
       }
     };
     
