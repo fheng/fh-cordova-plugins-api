@@ -323,47 +323,58 @@ if(window.$fh){
         if(p.isHtml){
           isHtml = true;
         }
-        navigator.emailcomposer.showEmailComposerWithCallback(function(res){
-          for(var key in navigator.emailcomposer.ComposeResultType){
-              var result = "Unknown";
-              if(navigator.emailcomposer.ComposeResultType[key] == res){
-                  result = key;
-                  break;
-              }
-          }
-          if(result.toLowerCase().indexOf("fail") > -1){
-            f(result);
-          } else {
-            s(result);
-          }
-        }, p.subject || "", p.body || "", to, cc, bcc, isHtml, attachments);
+        if(navigator.emailcomposer || (window.plugins && window.plugins.EmailComposer)){
+          var emailcomposer = navigator.emailcomposer || window.plugins.EmailComposer;
+          emailcomposer.showEmailComposerWithCallback(function(res){
+            for(var key in emailcomposer.ComposeResultType){
+                var result = "Unknown";
+                if(emailcomposer.ComposeResultType[key] == res){
+                    result = key;
+                    break;
+                }
+            }
+            if(result.toLowerCase().indexOf("fail") > -1){
+              f(result);
+            } else {
+              s(result);
+            }
+          }, p.subject || "", p.body || "", to, cc, bcc, isHtml, attachments);
+        } else {
+          return f("send_nosupport");
+        }
       }else if(p.type == "sms"){
-        window.plugins.smsComposer.showSMSComposerWithCB(function(res){
-          var status = 'Failed'; // default to failed
-          if (result === 0)
-          {
-              status = 'Cancelled';
-          }
-          else if (result === 1)
-          {
-              status = 'Sent';
-          }
-          else if (result === 2)
-          {
-              status = 'Failed';
-          }
-          else if (result === 3)
-          {
-              status = 'NotSent';
-          }
+        if(window.plugins && (window.plugins.smsComposer || window.plugins.smsBuilder)){
+          var smsComposer = window.plugins.smsBuilder || window.plugins.smsComposer;
+          smsComposer.showSMSComposerWithCB(function(res){
+            var status = 'Failed'; // default to failed
+            if (result === 0)
+            {
+                status = 'Cancelled';
+            }
+            else if (result === 1)
+            {
+                status = 'Sent';
+            }
+            else if (result === 2)
+            {
+                status = 'Failed';
+            }
+            else if (result === 3)
+            {
+                status = 'NotSent';
+            }
 
-          if (status === 'Failed') {
-            f(status);
-    } else {
-      s(status);
-          }
-        }, p.to, p.body); 
-        return;
+            if (status === 'Failed') {
+              f(status);
+            } else {
+              s(status);
+                  }
+            }, p.to, p.body); 
+            return;
+        } else {
+          f('send_sms_nosupport', {}, p);
+          return;
+        }
       }else{
         f('send_nosupport', {}, p);
         return;
