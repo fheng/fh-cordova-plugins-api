@@ -237,10 +237,9 @@ if(window.$fh){
           return;
         }
         if(p.interval == 0){
-          var timer = navigator.accelerometer.watchAcceleration(function(accel){
+          var timer = navigator.accelerometer.getCurrentAcceleration(function(accel){
             var result = {x: accel.x, y: accel.y, z: accel.z, when: accel.timestamp};
             s(result);
-            navigator.accelerometer.clearWatch(timer);
           }, function(){
             f('error_acc', {}, p);
           },  {frequency: 1000})
@@ -345,7 +344,7 @@ if(window.$fh){
       }else if(p.type == "sms"){
         if(window.plugins && (window.plugins.smsComposer || window.plugins.smsBuilder)){
           var smsComposer = window.plugins.smsBuilder || window.plugins.smsComposer;
-          smsComposer.showSMSComposerWithCB(function(res){
+          smsComposer.showSMSBuilderWithCB(function(res){
             var status = 'Failed'; // default to failed
             if (result === 0)
             {
@@ -438,7 +437,7 @@ if(window.$fh){
             }
         }
         
-        acts[p.act]? acts[p.act]() : f('data_badact');
+        acts[p.act]? acts[p.act]() : f('audio_badact');
     };
     
     $fh.__dest__.webview = function(p, s, f){
