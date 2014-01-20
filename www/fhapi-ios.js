@@ -391,11 +391,16 @@ if(window.$fh){
           f('ori_no_value');
           return;
         }
-        navigator.deviceOrientation.setOrientation(p.value, function(ori){
-          s(ori);
-        }, function(err){
-          f('set_ori_error');
-        });
+        if(navigator.deviceOrientation || (window.plugins && window.plugins.deviceOrientation)){
+          var deviceOrientation = window.deviceOrientation || window.plugins.deviceOrientation;
+          deviceOrientation.setOrientation(p.value, function(ori){
+            s(ori);
+          }, function(err){
+            f('set_ori_error');
+          });
+        } else {
+          f('ori_nosupport');
+        }
       }
     };
     
@@ -406,20 +411,27 @@ if(window.$fh){
             f('no_audio_path');
             return;
         }
+        var streamImpl = null;
+        if(navigator.stream || (window.plugins && window.plugins.stream)){
+          streamImpl = navigator.stream || window.plugins.stream;
+        }
+        if(!streamImpl){
+          return f('audio_nosupport');
+        }
         var acts = {
             'play': function(){
-                navigator.stream.play(p, function(){
+                streamImpl.play(p, function(){
                     $fh.__dest__.is_playing_audio = true;
                     s();
                 }, f);
             },
             
             'pause': function(){
-                navigator.stream.pause(p, s, f);
+                streamImpl.pause(p, s, f);
             },
             
             'stop':function(){
-                navigator.stream.stop(p, function(){
+                streamImpl.stop(p, function(){
                     $fh.__dest__.is_playing_audio = false;
                     s();
                 }, f);
@@ -430,15 +442,22 @@ if(window.$fh){
     };
     
     $fh.__dest__.webview = function(p, s, f){
+      var webviewImpl = null;
+      if(navigator.webview || (window.plugins && window.plugins.webview)){
+        webviewImpl = navigator.webview || window.plugins.webview;
+      }
+      if(!webviewImpl){
+        return f('webview_nosupport');
+      }
       if(!('act' in p) || p.act === 'open'){
         if(!p.url){
           f('no_url');
           return;
         }
-        navigator.webview.load(p, s, f);
+        webviewImpl.load(p, s, f);
       } else {
         if(p.act === "close"){
-          navigator.webview.close(p, s, f);
+          webviewImpl.close(p, s, f);
         }
       }
     };
@@ -503,7 +522,32 @@ if(window.$fh){
               f('file_nofiledest');
               return;
             }
-            var options = {src: p.src,dest:p.dest};
+            window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(fs){
+              var appDir = fs.root.fullPath;
+              var downloadTarget = [appDir, "Downloads", p.dest].join("/");
+              if(p.progressListener && typeof p.progressListener === "function"){
+                navigator.fileTransfer.onprogress = function(progressEvent){
+                  p.progressListener(progressEvent.loaded / progressEvent.total);
+                }
+              }
+              navigator.fileTransfer.download(p.src, downloadTarget, function(entry){
+                s(entry.fullPath);
+              }, function(error){
+                if(error.code === FileTransferError.FILE_NOT_FOUND_ERR){
+                  return f(errors[0]);
+                } else if(error.code === FileTransferError.INVALID_URL_ERR){
+                  return f(errors[1]);
+                } else if(error.code == FileTransferError.CONNECTION_ERR){
+                  return f(errors[2]);
+                } else if(error.code === FileTransferError.ABORT_ERR){
+                  return f(errors[4]);
+                }
+              }, false, {headers: p.headers});
+            }, function(err){
+              return f(err.target.error.code);
+            });
+            
+            /*var options = {src: p.src,dest:p.dest};
             var progressListener = undefined;
             if(p.progressListener && typeof p.progressListener === "function"){
               progressListener = p.progressListener;
@@ -527,11 +571,11 @@ if(window.$fh){
                 if(progressListener){
                   progressListener(progress);
                 }
-            }, options);
+            }, options);*/
           },
           
           'cancelDownload': function(){
-            navigator.filedownloader.cancel();
+            navigator.fileTransfer.abort();
           },
           
           'open' : function(){
@@ -539,11 +583,13 @@ if(window.$fh){
               f('file_nopath');
               return;
             }
-            navigator.fileMgr.openFile(p.filepath, function(){
+            var ref = window.open(p.filepath, "_system", {});
+            ref.addEventListener('loadstop', function(){
               s();
-            }, function(){
+            });
+            ref.addEventListener('loaderror', function(){
               f();
-            })
+            });
           },
           
           'list' : function(){
@@ -551,15 +597,20 @@ if(window.$fh){
               f('file_nourl');
               return;
             }
-            navigator.ftputil.list(function(list){
-              s({list: list});
-            }, function(err){
-              if(err == 1){
-                f(errors[2]);
-              } else if(err == 5){
-                f(errors[1]);
-              }
-            }, p);
+            if(navigator.ftputil || (window.plugins && window.plugins.ftputil)){
+              var ftputil = navigator.ftputil || window.plugins.ftputil;
+              ftputil.list(function(list){
+                s({list: list});
+              }, function(err){
+                if(err == 1){
+                  f(errors[2]);
+                } else if(err == 5){
+                  f(errors[1]);
+                }
+              }, p);
+            } else {
+              f('file_ftplist_nosupport');
+            }
           }
       }
       
