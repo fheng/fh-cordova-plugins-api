@@ -545,32 +545,6 @@ if(window.$fh){
             }, function(err){
               return f(err.target.error.code);
             });
-            
-            /*var options = {src: p.src,dest:p.dest};
-            var progressListener = undefined;
-            if(p.progressListener && typeof p.progressListener === "function"){
-              progressListener = p.progressListener;
-            }
-            navigator.filedownloader.download(function(filePath){
-              s(filePath);
-            }, function(err){
-                //error codes from phonegap
-                if(err == 1 || err == 2 || err == 3 || err == 7 || err == 9 || err == 11){
-                  f(errors[2]);
-                } else if(err == 5 || err == 6){
-                  f(errors[1]);
-                } else if(err == 4){
-                  f(errors[4]);
-                } else if(err == 8){
-                  f(errors[0]);
-                } else if (err ==10){
-                  f(errors[3]);
-                }
-            }, function(progress){
-                if(progressListener){
-                  progressListener(progress);
-                }
-            }, options);*/
           },
           
           'cancelDownload': function(){
