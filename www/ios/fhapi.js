@@ -328,4 +328,17 @@ if(window.$fh){
     
     acts[p.act]?acts[p.act]() : f('push_badact');
   };
+
+  document.addEventListener('deviceready', function () {
+    $fh._readyState = true;
+    document.removeEventListener('deviceready', arguments.callee, false);
+    while ($fh._readyCallbacks.length > 0) {
+      var f = $fh._readyCallbacks.shift();
+      try{
+        f();
+      }catch(e){
+        console.log("Error during $fh.ready. Skip. Error = " + e.message);
+      }
+    }
+  }, false);
 }

@@ -103,7 +103,7 @@ if(window.$fh){
   /**
    *  CONTACTS
    */
-  $fh.__dest__.contacts = function (p, s, f) {
+  $fh.__dest__.contacts = function (p, s, f){
     var convertFormat = function (ct) {
       var c = ct;
       if(typeof ct == "string"){
@@ -167,10 +167,7 @@ if(window.$fh){
 
     var fields = ["*"];
     var defaultFields = ["name", "displayName","nickname", "phoneNumbers", "emails", "addresses"];
-    var options = {
-      multiple: true,
-      filter: ""
-    };
+    var options = { multiple: true, filter: ""};
     var acts = {
       list: function () {
         navigator.contacts.find(fields, function (cl) {
@@ -182,6 +179,7 @@ if(window.$fh){
           f('contacts_error', {}, p);
         }, options);
       },
+
       find: function () {
         var searchFields = defaultFields;
         if(p.by){
@@ -199,7 +197,7 @@ if(window.$fh){
         }, options);
       },
 
-      add: function () {
+      add: function() {
         if(p.gui){
           if(navigator.contacts.newContactUI){
             //gui is supported on ios
@@ -211,7 +209,7 @@ if(window.$fh){
             navigator.contacts.insert(function(c){
               var contact = convertFormat(c);
               return s(contact);
-            })
+            });
           } else {
             return f("contacts_no_support");
           }
@@ -292,6 +290,7 @@ if(window.$fh){
         }
       }
     };
+
     var actfunc = acts[p.act];
     if (actfunc) {
       actfunc();
@@ -452,7 +451,7 @@ if(window.$fh){
    */
   $fh.__dest__.env = function (p, s, f) {
     s({
-      uuid: window.device? window.device.uuid: navigator.device.uuid;
+      uuid: window.device? window.device.uuid: navigator.device.uuid
     });
   };
 
@@ -483,18 +482,5 @@ if(window.$fh){
       f('ori_badact');
     }
   };
-
-  document.addEventListener('deviceready', function () {
-    $fh._readyState = true;
-    document.removeEventListener('deviceready', arguments.callee, false);
-    while ($fh._readyCallbacks.length > 0) {
-      var f = $fh._readyCallbacks.shift();
-      try{
-        f();
-      }catch(e){
-        console.log("Error during $fh.ready. Skip. Error = " + e.message);
-      }
-    }
-  }, false);
 
 }
