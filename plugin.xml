@@ -12,27 +12,31 @@
     
     <!-- see http://cordova.apache.org/docs/en/3.0.0/plugin_ref_spec.md.html#Plugin%20Specification for element details-->
 
+    <js-module src="www/fhapi.js" name="FHAPI">
+      <merges target="$fh" />
+    </js-module>
+
     <!--TODO: find common code and extract -->
     <platform name="wp7">
-        <js-module src="www/wp/fhapi.js" name="FHAPI">
+        <js-module src="www/wp/fhapi.js" name="FHAPI_WP7">
             <merges target="$fh" />
         </js-module>
     </platform>
 
     <platform name="wp8">
-        <js-module src="www/wp/fhapi.js" name="FHAPI">
+        <js-module src="www/wp/fhapi.js" name="FHAPI_WP8">
             <merges target="$fh" />
         </js-module>
     </platform>
 
     <platform name="ios">
-        <js-module src="www/ios/fhapi.js" name="FHAPI">
+        <js-module src="www/ios/fhapi.js" name="FHAPI_IOS">
           <merges target="$fh" />
         </js-module>
     </platform>
 
     <platform name="android">
-        <js-module src="www/android/fhapi.js" name="FHAPI">
+        <js-module src="www/android/fhapi.js" name="FHAPI_ANDROID">
             <merges target="$fh" />
         </js-module>
     </platform>

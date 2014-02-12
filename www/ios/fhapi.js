@@ -1,581 +1,269 @@
 if(window.$fh){
   var $fh = window.$fh;
+    
+  $fh.__dest__.send = function(p, s, f){
+    function getAsArray(input){
+      var ret = [];
+      if(input){
+        if(typeof input === "string"){
+          ret = [input];
+        } else {
+          ret = input;
+        }
+      }
+      return ret;
+    }
+    if(p.type == "email"){
+      var isHtml = false;
+      var to = getAsArray(p.to);
+      var cc = getAsArray(p.cc);
+      var bcc = getAsArray(p.bcc);
+      var attachments = getAsArray(p.attachments);
+      if(p.isHtml){
+        isHtml = true;
+      }
+      if(navigator.emailcomposer || (window.plugins && window.plugins.EmailComposer)){
+        var emailcomposer = navigator.emailcomposer || window.plugins.EmailComposer;
+        emailcomposer.showEmailComposerWithCallback(function(res){
+          for(var key in emailcomposer.ComposeResultType){
+              var result = "Unknown";
+              if(emailcomposer.ComposeResultType[key] == res){
+                  result = key;
+                  break;
+              }
+          }
+          if(result.toLowerCase().indexOf("fail") > -1){
+            f(result);
+          } else {
+            s(result);
+          }
+        }, p.subject || "", p.body || "", to, cc, bcc, isHtml, attachments);
+      } else {
+        return f("send_nosupport");
+      }
+    }else if(p.type == "sms"){
+      if(window.plugins && (window.plugins.smsComposer || window.plugins.smsBuilder)){
+        var smsComposer = window.plugins.smsBuilder || window.plugins.smsComposer;
+        smsComposer.showSMSBuilderWithCB(function(res){
+          var status = 'Failed'; // default to failed
+          if (result === 0)
+          {
+              status = 'Cancelled';
+          }
+          else if (result === 1)
+          {
+              status = 'Sent';
+          }
+          else if (result === 2)
+          {
+              status = 'Failed';
+          }
+          else if (result === 3)
+          {
+              status = 'NotSent';
+          }
 
-  $fh.__dest__.setUUID = function(p, s, f) {
-    //do nothing for devices  
+          if (status === 'Failed') {
+            f(status);
+          } else {
+            s(status);
+                }
+          }, p.to, p.body); 
+          return;
+      } else {
+        f('send_sms_nosupport', {}, p);
+        return;
+      }
+    }else{
+      f('send_nosupport', {}, p);
+      return;
+    }
+  };
+    
+  $fh.__dest__.is_playing_audio = false;
+  
+  $fh.__dest__.audio = function(p, s, f){
+    if(!$fh.__dest__.is_playing_audio && !p.path){
+        f('no_audio_path');
+        return;
+    }
+    var streamImpl = null;
+    if(navigator.stream || (window.plugins && window.plugins.stream)){
+      streamImpl = navigator.stream || window.plugins.stream;
+    }
+    if(!streamImpl){
+      return f('audio_nosupport');
+    }
+    var acts = {
+        'play': function(){
+            streamImpl.play(p, function(){
+                $fh.__dest__.is_playing_audio = true;
+                s();
+            }, f);
+        },
+        
+        'pause': function(){
+            streamImpl.pause(p, s, f);
+        },
+        
+        'stop':function(){
+            streamImpl.stop(p, function(){
+                $fh.__dest__.is_playing_audio = false;
+                s();
+            }, f);
+        }
+    }
+    
+    acts[p.act]? acts[p.act]() : f('audio_badact');
+  };
+    
+  $fh.__dest__.webview = function(p, s, f){
+    var webviewImpl = null;
+    if(navigator.webview || (window.plugins && window.plugins.webview)){
+      webviewImpl = navigator.webview || window.plugins.webview;
+    }
+    if(!webviewImpl){
+      return f('webview_nosupport');
+    }
+    if(!('act' in p) || p.act === 'open'){
+      if(!p.url){
+        f('no_url');
+        return;
+      }
+      webviewImpl.load(p, s, f);
+    } else {
+      if(p.act === "close"){
+        webviewImpl.close(p, s, f);
+      }
+    }
   };
 
-    $fh.__dest__.contacts = function (p, s, f) {
-      var defaultFields = ["name", "nickname", "phoneNumbers", "emails", "addresses"];
-      var convertRecords = function (records) {
-        var retJson = {};
-        if(records){
-          for (var i = 0; i < records.length; i++) {
-            var obj = records[i];
-            retJson[obj.type] = obj.value;
+    
+  $fh.__dest__.file = function (p, s, f) {
+    var errors =['file_notfound', 'file_invalid_url', 'file_connection_err', 'file_server_err', 'file_user_cancelled'];
+    if(typeof navigator.fileTransfer === "undefined"){
+      navigator.fileTransfer = new FileTransfer();
+    }
+    var acts = {
+      'upload': function () {
+          if (!p.filepath) {
+              f('file_nofilepath');
+              return;
           }
-        } 
-        return retJson;
-      };
-      //TODO: follow the W3C Contact API once it's approved
-      var convertToFhFormat = function(w3cFormatContact){
-        return {
-          first: w3cFormatContact.name.givenName,
-          last: w3cFormatContact.name.familyName,
-          name: null == w3cFormatContact.nickname? w3cFormatContact.name.formatted : w3cFormatContact.nickname,
-          addr: convertRecords(w3cFormatContact.addresses),
-          phone: convertRecords(w3cFormatContact.phoneNumbers),
-          email: convertRecords(w3cFormatContact.emails),
-          id: w3cFormatContact.id
-        }
-      }
-
-      var acts = {
-        list: function () {
-          navigator.contacts.find(
-          ["*"],
-          function (cl) {
-            var cs = [];
-            for ( var i = 0, cll = cl.length; i < cll; i++ ) {
-              var c = cl[i];
-              cs.push(convertToFhFormat(c));
-            }
-            s({
-              list: cs
-            });
-          },
-
-          function () {
-            f('contacts_list', {}, p);
-          },
-
-          {"filter":"", "multiple": 1})
-        },
-
-        find: function () {
-          var fields = ["*"];
-          if (p.by) {
-            fields = defaultFields;
-            fields.push(p.by);
-          };
-          
-          navigator.contacts.find(fields, function (cl) {
-            var cs = [];
-            for(var i=0;i<cl.length;i++){
-              cs.push(convertToFhFormat(cl[i]));
-            }
-            s({
-              list: cs
-            });
-          }),
-
-          function () {
-            f("contact_not_found", {}, p);
-          },
-
-          {"filter": p.val, "multiple": 1}
-        },
-
-        add: function () {
+          if (!p.server) {
+              f('file_noserver');
+              return;
+          }
           var options = {};
-          if (p.gui) {
-            options.gui = true;
+          if (p.filekey) {
+              options.fileKey = p.filekey;
           }
-          if (!p.gui && !p.contact) {
-            return function () {
-              f('no_contact', {}, p);
-            }
+          if (p.filename) {
+              options.fileName = p.filename;
           }
-          if(p.gui){
-            navigator.contacts.newContactUI(function(cid){
-              s({id: cid});
-            })
-          } else {
-            var contactParam = p.contact;
-            if (p.contact) {
-              var phones = [];
-              if (typeof p.contact.phone === 'object') {
-                for (var key in p.contact.phone) {
-                  phones.push({type: key, value: p.contact.phone[key]});
-                }
-              } else if(typeof p.contact.phone === "string"){
-                phones.push({type:'mobile', value: p.contact.phone});
+          if (p.mime) {
+              options.mimeType = p.mime;
+          }
+          if (p.params) {
+              options.params = p.params;
+          }
+          navigator.fileTransfer.upload(p.filepath, p.server, function (result) {
+              s({
+                status: result.responseCode,
+                  res: unescape(result.response),
+                  size: result.bytesSent
+              });
+          }, function (errorResult) {
+              var error = errorResult.code;
+              var err = 'file_unknown';
+              if( 1<= error <=4){
+                err = errors[error - 1];
               }
-              if(phones.length > 0){
-                contactParam["phoneNumbers"] = phones;
-              }
-              if(p.contact.first || p.contact.last){
-                contactParam["name"] = {"givenName" : p.contact.first, "familyName": p.contact.last};
-              }
-            }
-            var contactObj = navigator.contacts.create(contactParam);
-            contactObj.save(
-              function (c) {
-                var contact = convertToFhFormat(c);
-                s(contact);
-              },function(err){
-                f(err, {}, p);
-            }); 
-          }
-        },
-
-        remove: function () {
-          if (!p.contact) {
-            return function () {
-              f('no_contact', {}, p);
-            }
-          }
-          if (!p.contact.id) {
-            return function () {
-              f('no_contactId', {}, p);
-            }
-          }
-          var contactObj = navigator.contacts.create({"id": p.contact.id});
-          alert(contactObj.id);
-          contactObj.remove(function(){
-            s();
-          }, function(err){
-            f(err);
-          });
-        },
-
-        choose: function () {
-          var options = {"fields": defaultFields};
-          if(p.allowEdit){
-            options["allowEditing"] = "true";
-          }
-          navigator.contacts.chooseContact(
-
-          function (cid, c) {
-            if(c){
-              var cl = [convertToFhFormat(c)];
-              s({list: cl});
-            } else {
-              f("no_contact_selected");
-            }
-          },
-
-          options)
-        }
-      };
-
-      var actfunc = acts[p.act];
-      if (actfunc) {
-        actfunc();
-      }
-      else {
-        f('contacts_badact', {}, p);
-      }
-    };
-
-    $fh.__dest__.log = function (p, s, f) {
-      window.console.log(p.message);
-    };
-    
-    $fh.__dest__._accWatcher = undefined;
-    $fh.__dest__._geoWatcher = undefined;
-    
-    $fh.__dest__.geo = function(p, s, f){
-      if(!p.act || p.act == "register"){
-        if($fh.__dest__._geoWatcher){
-          f('geo_inuse', {}, p);
-          return;
-        }
-        if(p.interval == 0){
-          navigator.geolocation.getCurrentPosition(function(position){
-            var coords = position.coords;
-            var resdata = {lon:coords.longitude, lat: coords.latitude, alt:coords.altitude, acc:coords.accuracy, head:coords.heading, speed:coords.speed, when:position.timestamp};
-            s(resdata);
-          }, function(){
-            f('error_geo', {}, p);
-          }, {enableHighAccuracy: p.enableHighAccuracy, maximumAge: p.maximumAge || 600000});
-        };
-        if(p.interval > 0){
-          var internalWatcher = navigator.geolocation.watchPosition(function(position){
-            var coords = position.coords;
-            var resdata = {lon:coords.longitude, lat: coords.latitude, alt:coords.altitude, acc:coords.accuracy, head:coords.heading, speed:coords.speed, when:position.timestamp};
-            s(resdata);
-          }, function(){
-            f('error_geo', {}, p);
-          }, {timeout:p.interval, enableHighAccuracy: p.enableHighAccuracy, maximumAge: p.maximumAge || 600000});
-          $fh.__dest__._geoWatcher = internalWatcher;
-        };
-      } else if(p.act == "unregister"){
-        if($fh.__dest__._geoWatcher){
-          navigator.geolocation.clearWatch($fh.__dest__._geoWatcher);
-          $fh.__dest__._geoWatcher = undefined;
-        };
-        s();
-      } else {
-        f('geo_badact', {}, p);
-      } 
+              f(err);
+          }, options);
+      },
       
-    };
-    
-    $fh.__dest__.acc = function(p, s, f){
-      if(!p.act || p.act == "register"){
-        if($fh.__dest__._accWatcher){
-          f('acc_inuse', {}, p);
+      'download': function() {
+        if(!p.src){
+          f('file_nofilesrc');
           return;
         }
-        if(p.interval == 0){
-          var timer = navigator.accelerometer.getCurrentAcceleration(function(accel){
-            var result = {x: accel.x, y: accel.y, z: accel.z, when: accel.timestamp};
-            s(result);
-          }, function(){
-            f('error_acc', {}, p);
-          },  {frequency: 1000})
+        if(!p.dest){
+          f('file_nofiledest');
+          return;
         }
-        if(p.interval > 0){
-          var internalWatcher = navigator.accelerometer.watchAcceleration(function(accel){
-            var result = {x: accel.x, y: accel.y, z: accel.z, when: accel.timestamp};
-            s(result);
-          }, function(){
-            f('error_acc', {}, p);
-          }, {frequency: p.interval});
-          $fh.__dest__._accWatcher = internalWatcher;
-        }
-      } else if(p.act == "unregister"){
-        if($fh.__dest__._accWatcher){
-          navigator.accelerometer.clearWatch($fh.__dest__._accWatcher);
-          $fh.__dest__._accWatcher = undefined;
-        }
-        s();
-      } else {
-        f('acc_badact', {}, p);
-      }
-      
-    };
-    
-    $fh.__dest__.notify = function(p, s, f){
-      if(p.type == 'vibrate'){
-        navigator.notification.vibrate();
-      }else if(p.type == "beep"){
-        navigator.notification.beep();
-      }else {
-        f('notify_badact', {}, p);
-      }
-    };
-    
-    $fh.__dest__.cam = function(p, s, f){
-      if(p.act && p.act != "picture"){
-        f('cam_nosupport', {}, p);
-        return;
-      }
-      var source = navigator.camera.PictureSourceType.CAMERA; //camera type
-      if(p.source && p.source == 'photo'){
-        source = navigator.camera.PictureSourceType.PHOTOLIBRARY;
-      }
-      var destType = 0;
-      if(p.uri){
-        destType = 1;
-      }
-      var options = {'sourceType':source, 'destinationType': destType};
-      navigator.camera.getPicture(function(pic){
-        if(p.uri){
-          s({uri: pic});
-        } else {
-          var picdata = {format:'jpg', b64:pic};
-          s(picdata);
-        }
-      }, function(message){
-        f('cam_error', {message: message}, p);
-      }, options);
-    };
-    
-    $fh.__dest__.send = function(p, s, f){
-      function getAsArray(input){
-        var ret = [];
-        if(input){
-          if(typeof input === "string"){
-            ret = [input];
-          } else {
-            ret = input;
+        window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(fs){
+          var appDir = fs.root.fullPath;
+          var downloadTarget = [appDir, "Downloads", p.dest].join("/");
+          if(p.progressListener && typeof p.progressListener === "function"){
+            navigator.fileTransfer.onprogress = function(progressEvent){
+              p.progressListener(progressEvent.loaded / progressEvent.total);
+            }
           }
-        }
-        return ret;
-      }
-      if(p.type == "email"){
-        var isHtml = false;
-        var to = getAsArray(p.to);
-        var cc = getAsArray(p.cc);
-        var bcc = getAsArray(p.bcc);
-        var attachments = getAsArray(p.attachments);
-        if(p.isHtml){
-          isHtml = true;
-        }
-        if(navigator.emailcomposer || (window.plugins && window.plugins.EmailComposer)){
-          var emailcomposer = navigator.emailcomposer || window.plugins.EmailComposer;
-          emailcomposer.showEmailComposerWithCallback(function(res){
-            for(var key in emailcomposer.ComposeResultType){
-                var result = "Unknown";
-                if(emailcomposer.ComposeResultType[key] == res){
-                    result = key;
-                    break;
-                }
+          navigator.fileTransfer.download(p.src, downloadTarget, function(entry){
+            s(entry.fullPath);
+          }, function(error){
+            if(error.code === FileTransferError.FILE_NOT_FOUND_ERR){
+              return f(errors[0]);
+            } else if(error.code === FileTransferError.INVALID_URL_ERR){
+              return f(errors[1]);
+            } else if(error.code == FileTransferError.CONNECTION_ERR){
+              return f(errors[2]);
+            } else if(error.code === FileTransferError.ABORT_ERR){
+              return f(errors[4]);
             }
-            if(result.toLowerCase().indexOf("fail") > -1){
-              f(result);
-            } else {
-              s(result);
-            }
-          }, p.subject || "", p.body || "", to, cc, bcc, isHtml, attachments);
-        } else {
-          return f("send_nosupport");
-        }
-      }else if(p.type == "sms"){
-        if(window.plugins && (window.plugins.smsComposer || window.plugins.smsBuilder)){
-          var smsComposer = window.plugins.smsBuilder || window.plugins.smsComposer;
-          smsComposer.showSMSBuilderWithCB(function(res){
-            var status = 'Failed'; // default to failed
-            if (result === 0)
-            {
-                status = 'Cancelled';
-            }
-            else if (result === 1)
-            {
-                status = 'Sent';
-            }
-            else if (result === 2)
-            {
-                status = 'Failed';
-            }
-            else if (result === 3)
-            {
-                status = 'NotSent';
-            }
-
-            if (status === 'Failed') {
-              f(status);
-            } else {
-              s(status);
-                  }
-            }, p.to, p.body); 
-            return;
-        } else {
-          f('send_sms_nosupport', {}, p);
+          }, false, {headers: p.headers});
+        }, function(err){
+          return f(err.target.error.code);
+        });
+      },
+      
+      'cancelDownload': function(){
+        navigator.fileTransfer.abort();
+      },
+      
+      'open' : function(){
+        if(!p.filepath){
+          f('file_nopath');
           return;
         }
-      }else{
-        f('send_nosupport', {}, p);
-        return;
-      }
-    };
-    
-    $fh.__dest__.ori = function(p, s, f) {
-      if(typeof p.act == "undefined" || p.act == "listen"){
-        document.addEventListener('orientationchange', function(){
-          s(window.orientation);
-        }, false);
-      } else if(p.act == "set"){
-        if(!p.value){
-          f('ori_no_value');
-          return;
-        }
-        if(navigator.deviceOrientation || (window.plugins && window.plugins.deviceOrientation)){
-          var deviceOrientation = window.deviceOrientation || window.plugins.deviceOrientation;
-          deviceOrientation.setOrientation(p.value, function(ori){
-            s(ori);
-          }, function(err){
-            f('set_ori_error');
-          });
-        } else {
-          f('ori_nosupport');
-        }
-      }
-    };
-    
-    $fh.__dest__.is_playing_audio = false;
-    
-    $fh.__dest__.audio = function(p, s, f){
-        if(!$fh.__dest__.is_playing_audio && !p.path){
-            f('no_audio_path');
-            return;
-        }
-        var streamImpl = null;
-        if(navigator.stream || (window.plugins && window.plugins.stream)){
-          streamImpl = navigator.stream || window.plugins.stream;
-        }
-        if(!streamImpl){
-          return f('audio_nosupport');
-        }
-        var acts = {
-            'play': function(){
-                streamImpl.play(p, function(){
-                    $fh.__dest__.is_playing_audio = true;
-                    s();
-                }, f);
-            },
-            
-            'pause': function(){
-                streamImpl.pause(p, s, f);
-            },
-            
-            'stop':function(){
-                streamImpl.stop(p, function(){
-                    $fh.__dest__.is_playing_audio = false;
-                    s();
-                }, f);
-            }
-        }
-        
-        acts[p.act]? acts[p.act]() : f('audio_badact');
-    };
-    
-    $fh.__dest__.webview = function(p, s, f){
-      var webviewImpl = null;
-      if(navigator.webview || (window.plugins && window.plugins.webview)){
-        webviewImpl = navigator.webview || window.plugins.webview;
-      }
-      if(!webviewImpl){
-        return f('webview_nosupport');
-      }
-      if(!('act' in p) || p.act === 'open'){
+        var ref = window.open(p.filepath, "_system", {});
+        ref.addEventListener('loadstop', function(){
+          s();
+        });
+        ref.addEventListener('loaderror', function(){
+          f();
+        });
+      },
+      
+      'list' : function(){
         if(!p.url){
-          f('no_url');
+          f('file_nourl');
           return;
         }
-        webviewImpl.load(p, s, f);
-      } else {
-        if(p.act === "close"){
-          webviewImpl.close(p, s, f);
+        if(navigator.ftputil || (window.plugins && window.plugins.ftputil)){
+          var ftputil = navigator.ftputil || window.plugins.ftputil;
+          ftputil.list(function(list){
+            s({list: list});
+          }, function(err){
+            if(err == 1){
+              f(errors[2]);
+            } else if(err == 5){
+              f(errors[1]);
+            }
+          }, p);
+        } else {
+          f('file_ftplist_nosupport');
         }
       }
-    };
+    }
     
-    $fh.__dest__.env = function(p, s, f){
-      s({
-        uuid: device.uuid
-      })
-    };
-
-    
-    $fh.__dest__.file = function (p, s, f) {
-      var errors =['file_notfound', 'file_invalid_url', 'file_connection_err', 'file_server_err', 'file_user_cancelled'];
-      if(typeof navigator.fileTransfer === "undefined"){
-        navigator.fileTransfer = new FileTransfer()
-      }
-      var acts = {
-          'upload': function () {
-              if (!p.filepath) {
-                  f('file_nofilepath');
-                  return;
-              }
-              if (!p.server) {
-                  f('file_noserver');
-                  return;
-              }
-              var options = {};
-              if (p.filekey) {
-                  options.fileKey = p.filekey;
-              }
-              if (p.filename) {
-                  options.fileName = p.filename;
-              }
-              if (p.mime) {
-                  options.mimeType = p.mime;
-              }
-              if (p.params) {
-                  options.params = p.params;
-              }
-              navigator.fileTransfer.upload(p.filepath, p.server, function (result) {
-                  s({
-                    status: result.responseCode,
-                      res: unescape(result.response),
-                      size: result.bytesSent
-                  });
-              }, function (errorResult) {
-                  var error = errorResult.code;
-                  var err = 'file_unknown';
-                  if( 1<= error <=4){
-                    err = errors[error - 1];
-                  }
-                  f(err);
-              }, options);
-          },
-          
-          'download': function() {
-            if(!p.src){
-              f('file_nofilesrc');
-              return;
-            }
-            if(!p.dest){
-              f('file_nofiledest');
-              return;
-            }
-            window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(fs){
-              var appDir = fs.root.fullPath;
-              var downloadTarget = [appDir, "Downloads", p.dest].join("/");
-              if(p.progressListener && typeof p.progressListener === "function"){
-                navigator.fileTransfer.onprogress = function(progressEvent){
-                  p.progressListener(progressEvent.loaded / progressEvent.total);
-                }
-              }
-              navigator.fileTransfer.download(p.src, downloadTarget, function(entry){
-                s(entry.fullPath);
-              }, function(error){
-                if(error.code === FileTransferError.FILE_NOT_FOUND_ERR){
-                  return f(errors[0]);
-                } else if(error.code === FileTransferError.INVALID_URL_ERR){
-                  return f(errors[1]);
-                } else if(error.code == FileTransferError.CONNECTION_ERR){
-                  return f(errors[2]);
-                } else if(error.code === FileTransferError.ABORT_ERR){
-                  return f(errors[4]);
-                }
-              }, false, {headers: p.headers});
-            }, function(err){
-              return f(err.target.error.code);
-            });
-          },
-          
-          'cancelDownload': function(){
-            navigator.fileTransfer.abort();
-          },
-          
-          'open' : function(){
-            if(!p.filepath){
-              f('file_nopath');
-              return;
-            }
-            var ref = window.open(p.filepath, "_system", {});
-            ref.addEventListener('loadstop', function(){
-              s();
-            });
-            ref.addEventListener('loaderror', function(){
-              f();
-            });
-          },
-          
-          'list' : function(){
-            if(!p.url){
-              f('file_nourl');
-              return;
-            }
-            if(navigator.ftputil || (window.plugins && window.plugins.ftputil)){
-              var ftputil = navigator.ftputil || window.plugins.ftputil;
-              ftputil.list(function(list){
-                s({list: list});
-              }, function(err){
-                if(err == 1){
-                  f(errors[2]);
-                } else if(err == 5){
-                  f(errors[1]);
-                }
-              }, p);
-            } else {
-              f('file_ftplist_nosupport');
-            }
-          }
-      }
-      
-      var actfunc = acts[p.act];
-      if(actfunc){
-        actfunc();
-      }else{
-        f('file_badact');
-      }
-
+    var actfunc = acts[p.act];
+    if(actfunc){
+      actfunc();
+    }else{
+      f('file_badact');
+    }
   };
 
   $fh.__dest__.push = function(p, s, f){
@@ -640,17 +328,4 @@ if(window.$fh){
     
     acts[p.act]?acts[p.act]() : f('push_badact');
   };
-
-  document.addEventListener('deviceready',function(){
-    $fh._readyState = true;
-    document.removeEventListener('deviceready', arguments.callee, false);
-    while($fh._readyCallbacks.length > 0){
-      var f = $fh._readyCallbacks.shift();
-      try{
-        f();
-      }catch(e){
-        console.log("Error during $fh.ready. Skip. Error = " + e.message);
-      }
-    }
-  });
 }
