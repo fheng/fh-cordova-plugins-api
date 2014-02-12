@@ -460,7 +460,7 @@ if(window.$fh){
         return;
       }
       if (p.interval == 0) {
-        var timer = navigator.geolocation.watchPosition(function (
+        navigator.geolocation.getCurrentPosition(function (
         position) {
           var coords = position.coords;
           var resdata = {
@@ -472,12 +472,12 @@ if(window.$fh){
             speed: coords.speed,
             when: position.timestamp
           };
-          navigator.geolocation.clearWatch(timer);
           s(resdata);
         }, function () {
           f('error_geo');
         }, {
-          frequency: 1000
+          enableHighAccuracy: p.enableHighAccuracy, 
+          maximumAge: p.maximumAge || 600000
         });
       };
       if (p.interval > 0) {
@@ -498,7 +498,9 @@ if(window.$fh){
         }, function () {
           f('error_geo');
         }, {
-          frequency: p.interval
+          timeout: p.interval,
+          enableHighAccuracy: p.enableHighAccuracy, 
+          maximumAge: p.maximumAge || 600000
         });
       };
     } else if (p.act == "unregister") {

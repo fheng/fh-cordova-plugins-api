@@ -188,7 +188,7 @@ if(window.$fh){
             s(resdata);
           }, function(){
             f('error_geo', {}, p);
-          })
+          }, {enableHighAccuracy: p.enableHighAccuracy, maximumAge: p.maximumAge || 600000});
         };
         if(p.interval > 0){
           var internalWatcher = navigator.geolocation.watchPosition(function(position){
@@ -197,7 +197,7 @@ if(window.$fh){
             s(resdata);
           }, function(){
             f('error_geo', {}, p);
-          }, {timeout:p.interval});
+          }, {timeout:p.interval, enableHighAccuracy: p.enableHighAccuracy, maximumAge: p.maximumAge || 600000});
           $fh.__dest__._geoWatcher = internalWatcher;
         };
       } else if(p.act == "unregister"){
