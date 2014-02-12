@@ -1,39 +1,9 @@
 if(window.$fh){
   var $fh = window.$fh;
-
-  /* Add the specific 'ready' implementation outside of on-device function definitions
-   as it doesn't depend on phonegap. Also, it must be defined before the app javscript 
-   is loaded so that the device specific implementation of 'ready; will override the 
-   generic implementation. 
- */
-  $fh._readyCallbacks = [];
-  $fh._readyState = false;
-  $fh.__dest__.ready = function (p, s, f) {
-    if ($fh._readyState) {
-      try{
-        s();
-      } catch (e){
-        console.log("Error during $fh.ready. Skip. Error = " + e.message);
-      }
-    } else {
-      $fh._readyCallbacks.push(s);
-    }
-  };
   $fh.__dest__.setUUID = function (p, s, f) {
     //do nothing for devices  
   };
-  document.addEventListener('deviceready', function () {
-    $fh._readyState = true;
-    document.removeEventListener('deviceready', arguments.callee, false);
-    while ($fh._readyCallbacks.length > 0) {
-      var f = $fh._readyCallbacks.shift();
-      try{
-        f();
-      }catch(e){
-        console.log("Error during $fh.ready. Skip. Error = " + e.message);
-      }
-    }
-  });
+
   $fh.__dest__.env = function (p, s, f) {
     s({
       uuid: window.device? window.device.uuid + "" : "",
@@ -41,6 +11,7 @@ if(window.$fh){
       density: window.device ? window.device.density : 1.0
     })
   };
+
   $fh.__dest__.handlers = function (p, s, f) {
     if (!p.type) {
       f('hanlders_no_type');
@@ -66,9 +37,11 @@ if(window.$fh){
     }
     types[p.type] ? types[p.type]() : f('hanlders_invalid_type');
   };
+
   $fh.__dest__.log = function (p, s, f) {
     console.log(p.message);
   };
+
   $fh.__dest__._geoWatcher = undefined;
   $fh.__dest__.geo = function (p, s, f) {
     if (!p.act || p.act == "register") {
@@ -77,7 +50,7 @@ if(window.$fh){
         return;
       }
       if (p.interval == 0) {
-        var timer = navigator.geolocation.watchPosition(function (
+        navigator.geolocation.getCurrentPosition(function (
         position) {
           var coords = position.coords;
           var resdata = {
@@ -89,13 +62,10 @@ if(window.$fh){
             speed: coords.speed,
             when: position.timestamp
           };
-          navigator.geolocation.clearWatch(timer);
           s(resdata);
         }, function () {
           f('error_geo');
-        }, {
-          frequency: 1000
-        });
+        }, {enableHighAccuracy: true});
       };
       if (p.interval > 0) {
         $fh.__dest__._geoWatcher = navigator.geolocation.watchPosition(
@@ -115,7 +85,7 @@ if(window.$fh){
         }, function () {
           f('error_geo');
         }, {
-          frequency: p.interval
+          enableHighAccuracy: true
         });
       };
     } else if (p.act == "unregister") {
@@ -128,6 +98,7 @@ if(window.$fh){
       f('geo_badact', {}, p);
     }
   };
+
   $fh.__dest__.contacts = function (p, s, f) {
     var defaultFields = ["name", "nickname", "phoneNumbers", "emails", "addresses"];
     var acts = {
@@ -265,6 +236,7 @@ if(window.$fh){
       f('contacts_badact', {}, p);
     }
   };
+
   /** **************************************************
    *  ACCELEROMETER
    *  **************************************************
@@ -277,7 +249,7 @@ if(window.$fh){
         return;
       }
       if (p.interval == 0) {
-        var timer = navigator.accelerometer.watchAcceleration(function (
+        navigator.accelerometer.getCurrentAcceleration(function (
         accel) {
           var result = {
             x: accel.x,
@@ -286,12 +258,9 @@ if(window.$fh){
             when: accel.timestamp
           };
           s(result);
-          navigator.accelerometer.clearWatch(timer);
         }, function () {
           f('error_acc', {}, p);
-        }, {
-          frequency: 1000
-        })
+        }, {})
       }
       if (p.interval > 0) {
         $fh.__dest__._accWatcher = navigator.accelerometer.watchAcceleration(function (accel) {
@@ -318,6 +287,7 @@ if(window.$fh){
       f('acc_badact', {}, p);
     }
   };
+
   $fh.__dest__.notify = function (p, s, f) {
     var acts = {
       vibrate: function () {
@@ -334,6 +304,7 @@ if(window.$fh){
       f('notify_badact', {}, p);
     }
   };
+
   $fh.__dest__.cam = function (p, s, f) {
     if (p.act && p.act != "picture") {
       f('cam_nosupport', {}, p);
@@ -367,6 +338,7 @@ if(window.$fh){
       f('cam_error', {}, p);
     }, options);
   };
+
   $fh.__dest__.send = function (p, s, f) {
     if (p.type == "email") {
       var url = "mailto:" + p.to + "?cc=" + (p.cc ? p.cc : " ") + "&bcc=" + (p.bcc ? p.bcc : " ") + "&subject=" + (p.subject ? p.subject : "") + "&body=" + (p.body ? encodeURI(p.body) : "");
@@ -391,13 +363,20 @@ if(window.$fh){
       return;
     }
   };
+
   $fh.__dest__.audio = function (p, s, f) {
-    navigator.audio.action(p, s, f);
+    var audioManager = window.plugins.stream || navigator.audio;
+    if(audioManager){
+      audioManager.action(p, s, f);
+    } else {
+      f("audio_nosupport");
+    }
   };
+
   $fh.__dest__.webview = function (p, s, f) {
     navigator.webview.action(p, s, f);
   };
-  //
+
   $fh.__dest__.ori = function (p, s, f) {
     if (typeof p.act == "undefined" || p.act == "listen") {
       window.addEventListener('orientationchange', function (e) {
@@ -408,7 +387,7 @@ if(window.$fh){
         f('ori_no_value');
         return;
       }
-      navigator.deviceOrientation.setOrientation(p.value, function (ori) {
+      window.plugins.deviceOrientation.setOrientation(p.value, function (ori) {
         s(ori);
       }, function (err) {
         f(err);
@@ -417,6 +396,7 @@ if(window.$fh){
       f('ori_badact');
     }
   };
+
   $fh.__dest__.file = function (p, s, f) {
     var errors = ['file_notfound', 'file_invalid_url', 'file_connection_err', 'file_server_err'];
     var acts = {
@@ -471,30 +451,51 @@ if(window.$fh){
       f('file_badact');
     }
   };
+
   $fh.__dest__.push = function (p, s, f) {
     var acts = {
       'register': function () {
-        navigator.pushNotification.registerEvent('registration', function (err, apid) {
-          s({
-            apid: apid
-          });
-        });
-        navigator.pushNotification.enablePush(function(){})
+        var onRegistration = function(event){
+          if(event.error){
+            console.log("Push Reg error: " + event.error);
+            f(event.error);
+          } else {
+            console.log("Push Reg success: " + event.pushID);
+            s({apid: event.pushID});
+          }
+        }
+        document.addEventListener("urbanairship.registration", onRegistration, false);
+        document.addEventListener("resume", function(){
+          document.addEventListener("urbanairship.registration", onRegistration, false);
+        }, false);
+        document.addEventListener("pause", function(){
+          document.removeEventListener("urbanairship.registration", onRegistration, false)
+        }, false);
+        window.PushNotification.enablePush(function(){});
       },
       'receive': function () {
-        //navigator.pushNotification.enablePush(function(){});
-        navigator.pushNotification.registerEvent('push', function(notification){
-           s(notification);
-        });
-        navigator.pushNotification.getIncoming(function(notification){
-          if(notification.message !== ""){
-            s(notification);
+        var handleIncomingPush = function(event) {
+          if(event.message) {
+            console.log("Incoming push: " + event.message);
+            s({message: event.message, extras: event.extras});
+          } else {
+            console.log("No incoming message")
           }
-        })
+        }
+        document.addEventListener("urbanairship.push", handleIncomingPush, false);
+        document.addEventListener("resume", function(){
+          document.addEventListener("urbanairship.push", handleIncomingPush, false);
+        }, false);
+        document.addEventListener("pause", function(){
+          document.removeEventListener("urbanairship.push", handleIncomingPush, false)
+        }, false);
+        window.PushNotification.getIncoming(handleIncomingPush);
+        console.log("Push receive regsitered");
       }
     };
     acts[p.act] ? acts[p.act]() : f('push_badact');
   };
+
   //needs to add the listener again here because the document.addEventListener has been overwritten by phonegap 2.2
   //and it was included after the first addEventListner called which means the first one is lost at this point...
   document.addEventListener('deviceready', function () {

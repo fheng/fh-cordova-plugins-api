@@ -1,14 +1,5 @@
 if(window.$fh){
   var $fh = window.$fh;
-  $fh._readyCallbacks = [];
-  $fh._readyState = false;
-  $fh.__dest__.ready = function (p, s, f) {
-    if ($fh._readyState) {
-      s();
-    } else {
-      $fh._readyCallbacks.push(s);
-    }
-  };
   $fh.__dest__.setUUID = function (p, s, f) {
     //do nothing for devices  
   };
@@ -593,6 +584,7 @@ if(window.$fh){
   var openUrl = function(url){
     window.open(url, '_blank', 'location=no');
   }
+  
   document.addEventListener('deviceready', function () {
     $fh._readyState = true;
     document.removeEventListener('deviceready', arguments.callee, false);
@@ -601,7 +593,7 @@ if(window.$fh){
       try{
         f();
       }catch(e){
-        
+        console.log("Error during $fh.ready. Skip. Error = " + e.message);
       }
     }
   }, false);

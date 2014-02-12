@@ -1,27 +1,9 @@
 if(window.$fh){
   var $fh = window.$fh;
-  $fh._readyCallbacks = [];
-  $fh._readyState = false;
-  $fh.__dest__.ready = function (p, s, f) {
-     if ($fh._readyState) {
-       s();
-     } else {
-       $fh._readyCallbacks.push(s);
-     }
-  };
 
   $fh.__dest__.setUUID = function(p, s, f) {
     //do nothing for devices  
   };
-
-  document.addEventListener('deviceready',function(){
-    $fh._readyState = true;
-    document.removeEventListener('deviceready', arguments.callee, false);
-    while($fh._readyCallbacks.length > 0){
-        var f = $fh._readyCallbacks.shift();
-        f();
-    }
-  });
 
     $fh.__dest__.contacts = function (p, s, f) {
       var defaultFields = ["name", "nickname", "phoneNumbers", "emails", "addresses"];
@@ -658,4 +640,17 @@ if(window.$fh){
     
     acts[p.act]?acts[p.act]() : f('push_badact');
   };
+
+  document.addEventListener('deviceready',function(){
+    $fh._readyState = true;
+    document.removeEventListener('deviceready', arguments.callee, false);
+    while($fh._readyCallbacks.length > 0){
+      var f = $fh._readyCallbacks.shift();
+      try{
+        f();
+      }catch(e){
+        console.log("Error during $fh.ready. Skip. Error = " + e.message);
+      }
+    }
+  });
 }
