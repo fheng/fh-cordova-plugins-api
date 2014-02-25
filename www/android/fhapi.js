@@ -2,10 +2,17 @@ if(window.$fh){
   var $fh = window.$fh;
 
   $fh.__dest__.env = function (p, s, f) {
+    var density = 1.0;
+    //we put new device propeties into our own plugin
+    if(window.fhdevice && window.fhdevice.density){
+      density = window.fhdevice.density;
+    } else if(window.device && window.device.density){
+      density = window.device.density;
+    }
     s({
       uuid: window.device? window.device.uuid + "" : "",
       //convert it to string
-      density: window.device ? window.device.density : 1.0
+      density: density
     })
   };
 

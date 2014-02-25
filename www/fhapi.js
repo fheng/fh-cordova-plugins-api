@@ -450,8 +450,16 @@ if(window.$fh){
    * $fh.env
    */
   $fh.__dest__.env = function (p, s, f) {
+    var uuid = null;
+    if(window.fhdevice && window.fhdevice.uuid){
+      uuid = window.fhdevice.uuid;
+    } else if(navigator.device && navigator.device.uuid){
+      uuid = navigator.device.uuid;
+    } else if(window.device && window.device.uuid){
+      uuid = window.device.uuid;
+    }
     s({
-      uuid: window.device? window.device.uuid: navigator.device.uuid
+      uuid: uuid
     });
   };
 
