@@ -1,6 +1,6 @@
 if(window.$fh){
   var $fh = window.$fh;
-    
+
   $fh.__dest__.send = function(p, s, f){
     function getAsArray(input){
       var ret = [];
@@ -44,7 +44,7 @@ if(window.$fh){
     }else if(p.type == "sms"){
       if(window.plugins && (window.plugins.smsComposer || window.plugins.smsBuilder)){
         var smsComposer = window.plugins.smsBuilder || window.plugins.smsComposer;
-        smsComposer.showSMSBuilderWithCB(function(res){
+        smsComposer.showSMSBuilderWithCB(function(result){
           var status = 'Failed'; // default to failed
           if (result === 0)
           {
@@ -68,7 +68,7 @@ if(window.$fh){
           } else {
             s(status);
                 }
-          }, p.to, p.body); 
+          }, p.to, p.body);
           return;
       } else {
         f('send_sms_nosupport', {}, p);
@@ -79,9 +79,9 @@ if(window.$fh){
       return;
     }
   };
-    
+
   $fh.__dest__.is_playing_audio = false;
-  
+
   $fh.__dest__.audio = function(p, s, f){
     if(!$fh.__dest__.is_playing_audio && !p.path){
         f('no_audio_path');
@@ -101,22 +101,22 @@ if(window.$fh){
                 s();
             }, f);
         },
-        
+
         'pause': function(){
             streamImpl.pause(p, s, f);
         },
-        
+
         'stop':function(){
             streamImpl.stop(p, function(){
                 $fh.__dest__.is_playing_audio = false;
                 s();
             }, f);
         }
-    }
-    
+    };
+
     acts[p.act]? acts[p.act]() : f('audio_badact');
   };
-    
+
   $fh.__dest__.webview = function(p, s, f){
     var webviewImpl = null;
     if(navigator.webview || (window.plugins && window.plugins.webview)){
@@ -138,8 +138,11 @@ if(window.$fh){
     }
   };
 
-    
+
   $fh.__dest__.file = function (p, s, f) {
+    if(typeof FileTransfer === "undefined"){
+      return f("file_nosupport");
+    }
     var errors =['file_notfound', 'file_invalid_url', 'file_connection_err', 'file_server_err', 'file_user_cancelled'];
     if(typeof navigator.fileTransfer === "undefined"){
       navigator.fileTransfer = new FileTransfer();
@@ -182,7 +185,7 @@ if(window.$fh){
               f(err);
           }, options);
       },
-      
+
       'download': function() {
         if(!p.src){
           f('file_nofilesrc');
@@ -198,7 +201,7 @@ if(window.$fh){
           if(p.progressListener && typeof p.progressListener === "function"){
             navigator.fileTransfer.onprogress = function(progressEvent){
               p.progressListener(progressEvent.loaded / progressEvent.total);
-            }
+            };
           }
           navigator.fileTransfer.download(p.src, downloadTarget, function(entry){
             s(entry.fullPath);
@@ -217,11 +220,11 @@ if(window.$fh){
           return f(err.target.error.code);
         });
       },
-      
+
       'cancelDownload': function(){
         navigator.fileTransfer.abort();
       },
-      
+
       'open' : function(){
         if(!p.filepath){
           f('file_nopath');
@@ -235,7 +238,7 @@ if(window.$fh){
           f();
         });
       },
-      
+
       'list' : function(){
         if(!p.url){
           f('file_nourl');
@@ -256,8 +259,8 @@ if(window.$fh){
           f('file_ftplist_nosupport');
         }
       }
-    }
-    
+    };
+
     var actfunc = acts[p.act];
     if(actfunc){
       actfunc();
@@ -274,12 +277,11 @@ if(window.$fh){
       'register': function(){
         var onRegistration = function(event)  {
           if (!event.error) {
-            console.log("Reg Success: " + event.pushID)
             s({deviceToken: event.pushID});
           } else {
             f(event.error);
           }
-        }
+        };
         document.addEventListener("urbanairship.registration", onRegistration, false);
 
         PushNotification.isPushEnabled(function(enabled){
@@ -288,7 +290,7 @@ if(window.$fh){
           } else {
             PushNotification.enablePush(function(){
               PushNotification.registerForNotificationTypes(PushNotification.notificationType.sound|PushNotification.notificationType.alert|PushNotification.notificationType.badge);
-            })
+            });
           }
         });
 
@@ -299,13 +301,13 @@ if(window.$fh){
           document.removeEventListener("urbanairship.registration", onRegistration, false);
         }, false);
       },
-      
+
       'receive': function(){
         var onPush = function(event){
           if(event.message){
             s(event.message);
           }
-        }
+        };
         PushNotification.getIncoming(onPush);
         PushNotification.isPushEnabled(function(enabled){
           if(enabled){
@@ -313,7 +315,7 @@ if(window.$fh){
           } else {
             PushNotification.enablePush(function(){
               document.addEventListener("urbanairship.push", onPush, false);
-            })
+            });
           }
         });
 
@@ -325,7 +327,7 @@ if(window.$fh){
         }, false);
       }
     };
-    
+
     acts[p.act]?acts[p.act]() : f('push_badact');
   };
 

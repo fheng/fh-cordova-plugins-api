@@ -4,9 +4,9 @@ if(window.$fh){
   /**
    * Override $fh.setUUID on devices as the uuid is provided by cordova
    */
-  
+
   $fh.__dest__.setUUID = function (p, s, f) {
-    //do nothing for devices  
+    //do nothing for devices
   };
 
   /**
@@ -27,12 +27,15 @@ if(window.$fh){
    */
   $fh.__dest__._accWatcher = undefined;
   $fh.__dest__.acc = function (p, s, f) {
+    if(typeof navigator === "undefined" || typeof navigator.accelerometer === "undefined"){
+      return f('acc_nosupport', {}, p);
+    }
     if (!p.act || p.act == "register") {
       if ($fh.__dest__._accWatcher) {
         f('acc_inuse', {}, p);
         return;
       }
-      if (p.interval == 0) {
+      if (p.interval === 0) {
         navigator.accelerometer.getCurrentAcceleration(function (accel) {
           var result = {
             x: accel.x,
@@ -43,7 +46,7 @@ if(window.$fh){
           s(result);
         }, function () {
           f('error_acc', {}, p);
-        }, {})
+        }, {});
       }
       if (p.interval > 0) {
         $fh.__dest__._accWatcher = navigator.accelerometer.watchAcceleration(function (accel) {
@@ -58,7 +61,7 @@ if(window.$fh){
           f('error_acc', {}, p);
         }, {
           frequency: p.interval
-        })
+        });
       }
     } else if (p.act == "unregister") {
       if ($fh.__dest__._accWatcher) {
@@ -75,6 +78,9 @@ if(window.$fh){
    * Cemera
    */
   $fh.__dest__.cam = function(p, s, f){
+    if(typeof navigator === "undefined" || typeof navigator.camera === "undefined"){
+      return f('cam_nosupport');
+    }
     if(p.act && p.act != "picture"){
       f('cam_nosupport', {}, p);
       return;
@@ -104,6 +110,9 @@ if(window.$fh){
    *  CONTACTS
    */
   $fh.__dest__.contacts = function (p, s, f){
+    if(typeof navigator === "undefined" || typeof navigator.contacts === "undefined"){
+      return f("contacts_nosupport");
+    }
     var convertFormat = function (ct) {
       var c = ct;
       if(typeof ct == "string"){
@@ -117,7 +126,7 @@ if(window.$fh){
         phone: convertRecords(c.phoneNumbers, "mobile"),
         email: convertRecords(c.emails, "email"),
         id: c.id
-      }
+      };
     };
 
     var getName = function(c){
@@ -133,12 +142,12 @@ if(window.$fh){
         first = parts[0];
         last = parts[parts.length - 1];
       }
-      
+
       return {
         first: first,
         last: last,
         formatted: formatted
-      }
+      };
     };
 
     var processResults = function (cl) {
@@ -185,7 +194,7 @@ if(window.$fh){
         if(p.by){
           searchFields.push(p.by);
         }
-        
+
         options.filter = p.val;
         navigator.contacts.find(searchFields, function (cl) {
           var cs = processResults(cl);
@@ -303,6 +312,9 @@ if(window.$fh){
    * File Upload
    */
   $fh.__dest__.file = function (p, s, f) {
+    if(typeof FileTransfer === "undefined"){
+      return f('file_nosupport');
+    }
     var errors = ['file_notfound', 'file_invalid_url', 'file_connection_err', 'file_server_err'];
     var acts = {
       'upload': function () {
@@ -348,7 +360,7 @@ if(window.$fh){
           f(err);
         }, options, debug);
       }
-    }
+    };
     var actfunc = acts[p.act];
     if (actfunc) {
       actfunc();
@@ -364,12 +376,15 @@ if(window.$fh){
   $fh.__dest__._geoWatcher = undefined;
 
   $fh.__dest__.geo = function (p, s, f) {
+    if(typeof navigator === "undefined" || typeof navigator.geolocation === "undefined"){
+      return f("geo_nosupport");
+    }
     if (!p.act || p.act == "register") {
       if ($fh.__dest__._geoWatcher) {
         f('geo_inuse', {}, p);
         return;
       }
-      if (p.interval == 0) {
+      if (p.interval === 0) {
         navigator.geolocation.getCurrentPosition(function (position) {
           var coords = position.coords;
           var resdata = {
@@ -385,10 +400,10 @@ if(window.$fh){
         }, function () {
           f('error_geo');
         }, {
-          enableHighAccuracy: p.enableHighAccuracy, 
+          enableHighAccuracy: p.enableHighAccuracy,
           maximumAge: p.maximumAge || 600000
         });
-      };
+      }
       if (p.interval > 0) {
         $fh.__dest__._geoWatcher = navigator.geolocation.watchPosition(
 
@@ -408,15 +423,15 @@ if(window.$fh){
           f('error_geo');
         }, {
           timeout: p.interval,
-          enableHighAccuracy: p.enableHighAccuracy, 
+          enableHighAccuracy: p.enableHighAccuracy,
           maximumAge: p.maximumAge || 600000
         });
-      };
+      }
     } else if (p.act == "unregister") {
       if ($fh.__dest__._geoWatcher) {
         navigator.geolocation.clearWatch($fh.__dest__._geoWatcher);
         $fh.__dest__._geoWatcher = undefined;
-      };
+      }
       s();
     } else {
       f('geo_badact', {}, p);
@@ -429,6 +444,9 @@ if(window.$fh){
    */
 
   $fh.__dest__.notify = function (p, s, f) {
+    if(typeof navigator === "undefined" || typeof navigator.notification === "undefined"){
+      return f("notify_nosupport");
+    }
     var acts = {
       vibrate: function () {
         navigator.notification.vibrate(1000);
@@ -437,7 +455,7 @@ if(window.$fh){
       beep: function () {
         navigator.notification.beep(2);
       }
-    }
+    };
     var actfunc = acts[p.type];
     if (actfunc) {
       actfunc();
@@ -484,7 +502,7 @@ if(window.$fh){
           f('set_ori_error');
         });
       } else {
-        f('ori_badact');
+        f('ori_nosupport');
       }
     } else {
       f('ori_badact');

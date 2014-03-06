@@ -13,10 +13,13 @@ if(window.$fh){
       uuid: window.device? window.device.uuid + "" : "",
       //convert it to string
       density: density
-    })
+    });
   };
 
   $fh.__dest__.handlers = function (p, s, f) {
+    if(typeof navigator === "undefined" || typeof navigator.app === "undefined"){
+      return f("handlers_nosupport");
+    }
     if (!p.type) {
       f('hanlders_no_type');
       return;
@@ -29,16 +32,16 @@ if(window.$fh){
             if (exit) {
               navigator.app.exitApp();
             }
-          }
+          };
         document.addEventListener('backbutton', handler, false);
       },
       'menu': function () {
         var handler = function () {
             s();
-          }
+          };
         document.addEventListener('menubutton', handler, false);
       }
-    }
+    };
     types[p.type] ? types[p.type]() : f('hanlders_invalid_type');
   };
 
@@ -53,7 +56,7 @@ if(window.$fh){
             s();
           }, function(err){
             f(err, {}, p);
-          }, p.to, p.body)
+          }, p.to, p.body);
         } else {
           f('send_sms_nobackground', {}, p);
         }
@@ -68,7 +71,10 @@ if(window.$fh){
   };
 
   $fh.__dest__.audio = function (p, s, f) {
-    var audioManager = window.plugins.stream || navigator.audio;
+    var audioManager = navigator.audio;
+    if(window.plugins && window.plugins.stream){
+      audioManager = window.plugins.stream;
+    }
     if(audioManager){
       audioManager.action(p, s, f);
     } else {
@@ -77,10 +83,17 @@ if(window.$fh){
   };
 
   $fh.__dest__.webview = function (p, s, f) {
-    navigator.webview.action(p, s, f);
+    if(navigator && navigator.webview){
+      navigator.webview.action(p, s, f);
+    } else {
+      return f("webview_nosupport");
+    }
   };
 
   $fh.__dest__.push = function (p, s, f) {
+    if(typeof window.PushNotification === "undefined"){
+      return f("push_nosupport");
+    }
     var acts = {
       'register': function () {
         var onRegistration = function(event){
@@ -91,13 +104,13 @@ if(window.$fh){
             console.log("Push Reg success: " + event.pushID);
             s({apid: event.pushID});
           }
-        }
+        };
         document.addEventListener("urbanairship.registration", onRegistration, false);
         document.addEventListener("resume", function(){
           document.addEventListener("urbanairship.registration", onRegistration, false);
         }, false);
         document.addEventListener("pause", function(){
-          document.removeEventListener("urbanairship.registration", onRegistration, false)
+          document.removeEventListener("urbanairship.registration", onRegistration, false);
         }, false);
         window.PushNotification.enablePush(function(){});
       },
@@ -107,15 +120,15 @@ if(window.$fh){
             console.log("Incoming push: " + event.message);
             s({message: event.message, extras: event.extras});
           } else {
-            console.log("No incoming message")
+            console.log("No incoming message");
           }
-        }
+        };
         document.addEventListener("urbanairship.push", handleIncomingPush, false);
         document.addEventListener("resume", function(){
           document.addEventListener("urbanairship.push", handleIncomingPush, false);
         }, false);
         document.addEventListener("pause", function(){
-          document.removeEventListener("urbanairship.push", handleIncomingPush, false)
+          document.removeEventListener("urbanairship.push", handleIncomingPush, false);
         }, false);
         window.PushNotification.getIncoming(handleIncomingPush);
         console.log("Push receive regsitered");
@@ -124,12 +137,12 @@ if(window.$fh){
     acts[p.act] ? acts[p.act]() : f('push_badact');
   };
 
-  
+
   document.addEventListener('deviceready', function () {
     if(navigator.splashscreen){
       try{
         navigator.splashscreen.hide();
-      }catch(e){ 
+      }catch(e){
       }
     }
     $fh._readyState = true;
