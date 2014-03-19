@@ -509,4 +509,19 @@ if(window.$fh){
     }
   };
 
+  $fh._readyCallbacks = [];
+  $fh._readyState = false; 
+  $fh.__dest__.ready = function (p, s, f) { 
+    if ($fh._readyState) { 
+      try{ 
+        s(); 
+      } 
+      catch (e){ 
+        console.log("Error during $fh.ready. Skip. Error = " + e.message);
+      }
+    } else { 
+      $fh._readyCallbacks.push(s);
+    }
+  };
+
 }
