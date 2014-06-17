@@ -1,21 +1,24 @@
-if(window.$fh){
+var loadOverride = function() {
   var $fh = window.$fh;
+  if (typeof $fh === "undefined" || typeof $fh.__dest__ === "undefined") {
+    return;
+  }
 
   /**
    * Override $fh.setUUID on devices as the uuid is provided by cordova
    */
 
-  $fh.__dest__.setUUID = function (p, s, f) {
+  $fh.__dest__.setUUID = function(p, s, f) {
     //do nothing for devices
   };
 
   /**
    * Override $fh.log
    */
-  $fh.__dest__.log = function (p, s, f) {
-    if(typeof p === "object" && p.message){
+  $fh.__dest__.log = function(p, s, f) {
+    if (typeof p === "object" && p.message) {
       window.console.log(p.message);
-    } else if(typeof p === "string"){
+    } else if (typeof p === "string") {
       window.console.log(p);
     } else {
       window.console.log(JSON.stringify(p));
@@ -26,8 +29,8 @@ if(window.$fh){
    * ACCELEROMETER
    */
   $fh.__dest__._accWatcher = undefined;
-  $fh.__dest__.acc = function (p, s, f) {
-    if(typeof navigator === "undefined" || typeof navigator.accelerometer === "undefined"){
+  $fh.__dest__.acc = function(p, s, f) {
+    if (typeof navigator === "undefined" || typeof navigator.accelerometer === "undefined") {
       return f('acc_nosupport', {}, p);
     }
     if (!p.act || p.act == "register") {
@@ -36,7 +39,7 @@ if(window.$fh){
         return;
       }
       if (p.interval === 0) {
-        navigator.accelerometer.getCurrentAcceleration(function (accel) {
+        navigator.accelerometer.getCurrentAcceleration(function(accel) {
           var result = {
             x: accel.x,
             y: accel.y,
@@ -44,12 +47,12 @@ if(window.$fh){
             when: accel.timestamp
           };
           s(result);
-        }, function () {
+        }, function() {
           f('error_acc', {}, p);
         }, {});
       }
       if (p.interval > 0) {
-        $fh.__dest__._accWatcher = navigator.accelerometer.watchAcceleration(function (accel) {
+        $fh.__dest__._accWatcher = navigator.accelerometer.watchAcceleration(function(accel) {
           var result = {
             x: accel.x,
             y: accel.y,
@@ -57,7 +60,7 @@ if(window.$fh){
             when: accel.timestamp
           };
           s(result);
-        }, function () {
+        }, function() {
           f('error_acc', {}, p);
         }, {
           frequency: p.interval
@@ -77,45 +80,55 @@ if(window.$fh){
   /**
    * Cemera
    */
-  $fh.__dest__.cam = function(p, s, f){
-    if(typeof navigator === "undefined" || typeof navigator.camera === "undefined"){
+  $fh.__dest__.cam = function(p, s, f) {
+    if (typeof navigator === "undefined" || typeof navigator.camera === "undefined") {
       return f('cam_nosupport');
     }
-    if(p.act && p.act != "picture"){
+    if (p.act && p.act != "picture") {
       f('cam_nosupport', {}, p);
       return;
     }
     var source = navigator.camera.PictureSourceType.CAMERA; //camera type
-    if(p.source && p.source === 'photo'){
+    if (p.source && p.source === 'photo') {
       source = navigator.camera.PictureSourceType.PHOTOLIBRARY;
     }
     var destType = navigator.camera.DestinationType.DATA_URL;
-    if(p.uri){
+    if (p.uri) {
       destType = navigator.camera.DestinationType.FILE_URI;
     }
-    var options = {'sourceType':source, 'destinationType': destType};
-    navigator.camera.getPicture(function(pic){
-      if(p.uri){
-        s({uri: pic});
+    var options = {
+      'sourceType': source,
+      'destinationType': destType
+    };
+    navigator.camera.getPicture(function(pic) {
+      if (p.uri) {
+        s({
+          uri: pic
+        });
       } else {
-        var picdata = {format:'jpg', b64:pic};
+        var picdata = {
+          format: 'jpg',
+          b64: pic
+        };
         s(picdata);
       }
-    }, function(message){
-      f('cam_error', {message: message}, p);
+    }, function(message) {
+      f('cam_error', {
+        message: message
+      }, p);
     }, options);
   };
 
   /**
    *  CONTACTS
    */
-  $fh.__dest__.contacts = function (p, s, f){
-    if(typeof navigator === "undefined" || typeof navigator.contacts === "undefined"){
+  $fh.__dest__.contacts = function(p, s, f) {
+    if (typeof navigator === "undefined" || typeof navigator.contacts === "undefined") {
       return f("contacts_nosupport");
     }
-    var convertFormat = function (ct) {
+    var convertFormat = function(ct) {
       var c = ct;
-      if(typeof ct == "string"){
+      if (typeof ct == "string") {
         c = JSON.parse(ct);
       }
       return {
@@ -129,15 +142,15 @@ if(window.$fh){
       };
     };
 
-    var getName = function(c){
+    var getName = function(c) {
       var first = "";
       var last = "";
       var formatted = null;
-      if (c.name){
+      if (c.name) {
         first = c.name.givenName;
         last = c.name.familyName;
         formatted = c.name.formatted;
-      } else if(c.displayName){
+      } else if (c.displayName) {
         var parts = c.displayName.split(" ");
         first = parts[0];
         last = parts[parts.length - 1];
@@ -150,7 +163,7 @@ if(window.$fh){
       };
     };
 
-    var processResults = function (cl) {
+    var processResults = function(cl) {
       var cs = [];
       for (var i = 0; i < cl.length; i++) {
         var c = convertFormat(cl[i]);
@@ -159,14 +172,14 @@ if(window.$fh){
       return cs;
     };
 
-    var convertRecords = function (records, defaultType) {
+    var convertRecords = function(records, defaultType) {
       var retJson = {};
       if (null != records) {
         for (var i = 0; i < records.length; i++) {
           var obj = records[i];
-          if(typeof obj == "object"){
+          if (typeof obj == "object") {
             retJson[obj.type] = obj.value;
-          } else if(typeof obj == "string") {
+          } else if (typeof obj == "string") {
             retJson[defaultType] = obj;
           }
         }
@@ -175,47 +188,52 @@ if(window.$fh){
     };
 
     var fields = ["*"];
-    var defaultFields = ["name", "displayName","nickname", "phoneNumbers", "emails", "addresses"];
-    var options = { multiple: true, filter: ""};
+    var defaultFields = ["name", "displayName", "nickname", "phoneNumbers", "emails", "addresses"];
+    var options = {
+      multiple: true,
+      filter: ""
+    };
     var acts = {
-      list: function () {
-        navigator.contacts.find(fields, function (cl) {
+      list: function() {
+        navigator.contacts.find(fields, function(cl) {
           var cs = processResults(cl);
           s({
             list: cs
           });
-        }, function () {
+        }, function() {
           f('contacts_error', {}, p);
         }, options);
       },
 
-      find: function () {
+      find: function() {
         var searchFields = defaultFields;
-        if(p.by){
+        if (p.by) {
           searchFields.push(p.by);
         }
 
         options.filter = p.val;
-        navigator.contacts.find(searchFields, function (cl) {
+        navigator.contacts.find(searchFields, function(cl) {
           var cs = processResults(cl);
           s({
             list: cs
           });
-        }, function () {
+        }, function() {
           f('contacts_error', {}, p);
         }, options);
       },
 
       add: function() {
-        if(p.gui){
-          if(navigator.contacts.newContactUI){
+        if (p.gui) {
+          if (navigator.contacts.newContactUI) {
             //gui is supported on ios
-            navigator.contacts.newContactUI(function(cid){
-              return s({id: cid});
+            navigator.contacts.newContactUI(function(cid) {
+              return s({
+                id: cid
+              });
             });
-          } else if(navigator.contacts.insert){
+          } else if (navigator.contacts.insert) {
             //gui is supported on android
-            navigator.contacts.insert(function(c){
+            navigator.contacts.insert(function(c) {
               var contact = convertFormat(c);
               return s(contact);
             });
@@ -251,15 +269,15 @@ if(window.$fh){
             }
           }
           var newContact = navigator.contacts.create(contactParam);
-          newContact.save(function (c) {
+          newContact.save(function(c) {
             s(convertFormat(c));
-          }, function (err) {
+          }, function(err) {
             f(err, {}, p);
           });
         }
       },
 
-      remove: function () {
+      remove: function() {
         if (!p.contact) {
           f('no_contact', {}, p);
           return;
@@ -272,21 +290,23 @@ if(window.$fh){
           id: p.contact.id
         };
         var contactObj = navigator.contacts.create(params);
-        contactObj.remove(function () {
+        contactObj.remove(function() {
           s();
-        }, function (err) {
+        }, function(err) {
           f(err, {}, p);
         });
       },
 
-      choose: function () {
+      choose: function() {
         var chooseFunc = navigator.contacts.chooseContact || navigator.contacts.choose;
-        if(chooseFunc && typeof chooseFunc === "function"){
-          var options = {"fields": defaultFields};
-          if(p.allowEdit){
+        if (chooseFunc && typeof chooseFunc === "function") {
+          var options = {
+            "fields": defaultFields
+          };
+          if (p.allowEdit) {
             options["allowEditing"] = "true";
           }
-          chooseFunc(function(cid, c){
+          chooseFunc(function(cid, c) {
             //ios returns cid and c and android only return c as the first arguments
             var data = c || cid;
             var cs = processResults([data]);
@@ -311,13 +331,13 @@ if(window.$fh){
   /**
    * File Upload
    */
-  $fh.__dest__.file = function (p, s, f) {
-    if(typeof FileTransfer === "undefined"){
+  $fh.__dest__.file = function(p, s, f) {
+    if (typeof FileTransfer === "undefined") {
       return f('file_nosupport');
     }
     var errors = ['file_notfound', 'file_invalid_url', 'file_connection_err', 'file_server_err'];
     var acts = {
-      'upload': function () {
+      'upload': function() {
         if (!p.filepath) {
           f('file_nofilepath');
           return;
@@ -337,22 +357,22 @@ if(window.$fh){
           options.mimeType = p.mime;
         }
         if (p.params) {
-        options.params = p.params;
+          options.params = p.params;
         }
         var debug = false;
         if (p.debug) {
           debug = true;
         }
-        if(!navigator.fileTransfer){
+        if (!navigator.fileTransfer) {
           navigator.fileTransfer = new FileTransfer();
         }
-        navigator.fileTransfer.upload(p.filepath, p.server, function (message) {
+        navigator.fileTransfer.upload(p.filepath, p.server, function(message) {
           s({
             status: message.responseCode,
             res: message.response,
             size: message.bytesSent
           });
-        }, function (error) {
+        }, function(error) {
           var err = 'file_unknown';
           if (1 <= error.code <= 4) {
             err = errors[error.code - 1];
@@ -375,8 +395,8 @@ if(window.$fh){
    */
   $fh.__dest__._geoWatcher = undefined;
 
-  $fh.__dest__.geo = function (p, s, f) {
-    if(typeof navigator === "undefined" || typeof navigator.geolocation === "undefined"){
+  $fh.__dest__.geo = function(p, s, f) {
+    if (typeof navigator === "undefined" || typeof navigator.geolocation === "undefined") {
       return f("geo_nosupport");
     }
     if (!p.act || p.act == "register") {
@@ -385,7 +405,7 @@ if(window.$fh){
         return;
       }
       if (p.interval === 0) {
-        navigator.geolocation.getCurrentPosition(function (position) {
+        navigator.geolocation.getCurrentPosition(function(position) {
           var coords = position.coords;
           var resdata = {
             lon: coords.longitude,
@@ -397,7 +417,7 @@ if(window.$fh){
             when: position.timestamp
           };
           s(resdata);
-        }, function () {
+        }, function() {
           f('error_geo');
         }, {
           enableHighAccuracy: p.enableHighAccuracy,
@@ -407,25 +427,25 @@ if(window.$fh){
       if (p.interval > 0) {
         $fh.__dest__._geoWatcher = navigator.geolocation.watchPosition(
 
-        function (position) {
-          var coords = position.coords;
-          var resdata = {
-            lon: coords.longitude,
-            lat: coords.latitude,
-            alt: coords.altitude,
-            acc: coords.accuracy,
-            head: coords.heading,
-            speed: coords.speed,
-            when: position.timestamp
-          };
-          s(resdata);
-        }, function () {
-          f('error_geo');
-        }, {
-          timeout: p.interval,
-          enableHighAccuracy: p.enableHighAccuracy,
-          maximumAge: p.maximumAge || 600000
-        });
+          function(position) {
+            var coords = position.coords;
+            var resdata = {
+              lon: coords.longitude,
+              lat: coords.latitude,
+              alt: coords.altitude,
+              acc: coords.accuracy,
+              head: coords.heading,
+              speed: coords.speed,
+              when: position.timestamp
+            };
+            s(resdata);
+          }, function() {
+            f('error_geo');
+          }, {
+            timeout: p.interval,
+            enableHighAccuracy: p.enableHighAccuracy,
+            maximumAge: p.maximumAge || 600000
+          });
       }
     } else if (p.act == "unregister") {
       if ($fh.__dest__._geoWatcher) {
@@ -443,16 +463,16 @@ if(window.$fh){
    *  **************************************************
    */
 
-  $fh.__dest__.notify = function (p, s, f) {
-    if(typeof navigator === "undefined" || typeof navigator.notification === "undefined"){
+  $fh.__dest__.notify = function(p, s, f) {
+    if (typeof navigator === "undefined" || typeof navigator.notification === "undefined") {
       return f("notify_nosupport");
     }
     var acts = {
-      vibrate: function () {
+      vibrate: function() {
         navigator.notification.vibrate(1000);
       },
 
-      beep: function () {
+      beep: function() {
         navigator.notification.beep(2);
       }
     };
@@ -467,13 +487,13 @@ if(window.$fh){
   /**
    * $fh.env
    */
-  $fh.__dest__.env = function (p, s, f) {
+  $fh.__dest__.env = function(p, s, f) {
     var uuid = null;
-    if(window.fhdevice && window.fhdevice.uuid){
+    if (window.fhdevice && window.fhdevice.uuid) {
       uuid = window.fhdevice.uuid;
-    } else if(navigator.device && navigator.device.uuid){
+    } else if (navigator.device && navigator.device.uuid) {
       uuid = navigator.device.uuid;
-    } else if(window.device && window.device.uuid){
+    } else if (window.device && window.device.uuid) {
       uuid = window.device.uuid;
     }
     s({
@@ -484,21 +504,21 @@ if(window.$fh){
   /**
    * Orientation
    */
-  $fh.__dest__.ori = function (p, s, f) {
+  $fh.__dest__.ori = function(p, s, f) {
     if (typeof p.act == "undefined" || p.act == "listen") {
-      window.addEventListener('orientationchange', function (e) {
+      window.addEventListener('orientationchange', function(e) {
         s(window.orientation);
       }, false);
     } else if (p.act == "set") {
-      if(navigator.deviceOrientation || (window.plugins && window.plugins.deviceOrientation)){
+      if (navigator.deviceOrientation || (window.plugins && window.plugins.deviceOrientation)) {
         if (!p.value) {
           f('ori_no_value');
           return;
         }
         var deviceOrientation = window.deviceOrientation || window.plugins.deviceOrientation;
-        deviceOrientation.setOrientation(p.value, function(ori){
+        deviceOrientation.setOrientation(p.value, function(ori) {
           s(ori);
-        }, function(err){
+        }, function(err) {
           f('set_ori_error');
         });
       } else {
@@ -510,18 +530,26 @@ if(window.$fh){
   };
 
   $fh._readyCallbacks = [];
-  $fh._readyState = false; 
-  $fh.__dest__.ready = function (p, s, f) { 
-    if ($fh._readyState) { 
-      try{ 
-        s(); 
-      } 
-      catch (e){ 
+  $fh._readyState = false;
+  $fh.__dest__.ready = function(p, s, f) {
+    if ($fh._readyState) {
+      try {
+        s();
+      } catch (e) {
         console.log("Error during $fh.ready. Skip. Error = " + e.message);
       }
-    } else { 
+    } else {
       $fh._readyCallbacks.push(s);
     }
   };
+}
 
+//since these overrides are loaded by cordova asynchronously via script injection, there is a chance that this file is loaded before
+//the feedhenry sdk file is loaded. Then the overrides won't work. So if that is the case, delay the load of the overrides.
+if (typeof window.$fh !== "undefined" && typeof window.$fh.__dest__ !== "undefined") {
+  loadOverride();
+} else {
+  setTimeout(function() {
+    loadOverride();
+  }, 200);
 }
