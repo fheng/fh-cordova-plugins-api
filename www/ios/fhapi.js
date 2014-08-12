@@ -25,8 +25,8 @@ if(window.$fh){
       if(navigator.emailcomposer || (window.plugins && window.plugins.EmailComposer)){
         var emailcomposer = navigator.emailcomposer || window.plugins.EmailComposer;
         emailcomposer.showEmailComposerWithCallback(function(res){
+          var result = "Unknown";
           for(var key in emailcomposer.ComposeResultType){
-              var result = "Unknown";
               if(emailcomposer.ComposeResultType[key] == res){
                   result = key;
                   break;
