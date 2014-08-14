@@ -154,7 +154,7 @@ var loadOverride = function() {
     }
     $fh._readyState = true;
     document.removeEventListener('deviceready', arguments.callee, false);
-    while ($fh._readyCallbacks.length > 0) {
+    while ($fh._readyCallbacks && $fh._readyCallbacks.length > 0) {
       var f = $fh._readyCallbacks.shift();
       try {
         f();
