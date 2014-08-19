@@ -529,8 +529,8 @@ var loadOverride = function() {
     }
   };
 
-  $fh._readyCallbacks = [];
-  $fh._readyState = false;
+  $fh._readyCallbacks = $fh._readyCallbacks || [];
+  $fh._readyState = $fh._readyState || false;
   $fh.__dest__.ready = function(p, s, f) {
     if ($fh._readyState) {
       try {
