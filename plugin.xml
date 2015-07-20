@@ -29,6 +29,12 @@
         </js-module>
     </platform>
 
+      <platform name="windows">
+        <js-module src="www/wp/fhapi.js" name="FHAPI_WP8">
+            <merges target="$fh" />
+        </js-module>
+    </platform>
+
     <platform name="ios">
         <js-module src="www/ios/fhapi.js" name="FHAPI_IOS">
           <merges target="$fh" />
