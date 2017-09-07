@@ -1,0 +1,35 @@
+{
+  "name": "fh-cordova-plugins-api",
+  "version": "0.0.7",
+  "description": "Implement $fh.* legacy APIs, most of them are just wrappers around cordova API",
+  "cordova": {
+    "id": "fh-cordova-plugins-api",
+    "platforms": [
+      "wp7",
+      "wp8",
+      "windows",
+      "ios",
+      "android"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fheng/fh-cordova-plugins-api.git"
+  },
+  "keywords": [
+    "FeedHenry",
+    "API",
+    "ecosystem:cordova",
+    "cordova-wp7",
+    "cordova-wp8",
+    "cordova-windows",
+    "cordova-ios",
+    "cordova-android"
+  ],
+  "author": "FeedHenry",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fheng/fh-cordova-plugins-api/issues"
+  },
+  "homepage": "https://github.com/fheng/fh-cordova-plugins-api#readme"
+}
